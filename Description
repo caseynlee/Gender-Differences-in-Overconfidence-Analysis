@@ -1,0 +1,36 @@
+# Gender Differences in Overconfidence Research Project
+
+## Project Overview
+- Conducted an independent statistical analysis investigating whether gender moderates the relationship between intelligence beliefs and overconfidence in academic settings. This research built upon established psychological literature to explore practical implications for educational and workplace interventions.
+- Research Question:Does gender affect the relationship between intelligence theories and overconfidence?"**
+
+## EDA
+- Dataset: Analyzed data from Ehrlinger et al. (2016) Study 3, involving undergraduate students' performance on GRE-like assessments
+- Sample: American college students who completed intelligence belief questionnaires and academic assessments
+- Key Variables Used: Intelligence theory scores, gender, attention allocation (easy vs. hard problems), actual vs. estimated performance percentiles
+
+## Statistical Methods 
+- Comparative Regression Modeling: Built two linear regression models to isolate gender effects
+  - Model 1: `E(Y | intel_theory, attn_to)` - baseline model without gender
+  - Model 2: `E(Y | intel_theory, attn_to, gender)` - full model including gender
+- Model Validation: Applied cross-validation techniques to assess model performance and prevent overfitting
+- Statistical Testing: Conducted F-tests, ANOVA, and residual analysis to evaluate model assumptions and significance
+- Performance Metrics: Calculated R², Mean Squared Error (MSE), and performed comparative model assessment
+
+## Key Findings
+
+- Model Performance: Including gender improved model fit significantly (R² increased from 2.5% to 17.4%)
+- Statistical Significance: Gender showed strong statistical significance (p-value = 0.00098)
+- Effect Size: Men demonstrated significantly higher overplacement (overestimation) compared to women
+- Model Accuracy: MSE improved from 800.3 to 678.1 when gender was included
+
+- Male Pattern: Tendency to overestimate academic performance, leading to higher overconfidence
+- Female Pattern: Tendency toward underestimation, potentially limiting academic and career advancement
+- Intelligence Beliefs: Marginal significance (p = 0.068) suggesting intelligence theory impacts overconfidence
+
+## Implications
+
+- Educational Interventions: Proposed confidence-building programs for female students to address systematic underestimation
+- Workplace Applications: Suggested organizational programs to ensure equal opportunity pursuit for leadership roles
+- Assessment Accuracy: Identified need for gender-aware approaches to self-assessment training
+
