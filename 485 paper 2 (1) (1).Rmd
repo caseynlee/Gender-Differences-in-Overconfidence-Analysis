@@ -1,0 +1,208 @@
+---
+title: "Paper 2 (Possible Gender Differences) Appendix"
+author: "Casey Lee"
+date: "2025-02-16"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(ggplot2)
+```
+
+## Overview  
+Paper 2 appendix provides an analysis of the possible gender differences in overconfidence. We will be creating two regression models (E(Y | intel_theory, attn_to) and E(Y | intel_theory, attn_to, gender):  
+1. See if the gender variable fits the first model and plot its fitted values.  
+2. Create plots to see if there is an unexplained variation potentially explained by gender.  
+3. Calculate in-sample loss for the versions of the first and second models to assess whether the relationship of overplacement to intelligence theory and experimental condition differed for men and women.
+
+We are using the merged file combining the holdout and the original sample to reinforce a paper model with and without a contribution from gender. Then we create two regression models: We find the in-sample loss calculations based on cross-validation and do a hypothesis test only for the holdout sample. 
+
+
+```{r cars}
+# read data
+no_gender <- read.csv("http://dept.stat.lsa.umich.edu/~bbh/s485/data/emdstudy3-small-nogender.csv")
+gender <- read.csv("http://dept.stat.lsa.umich.edu/~bbh/s485/data/emdstudy3-small.csv")
+
+# renaming columns 
+data_no_gender <- c("intel_theory", "attn_to", "ActPerc", "EstPerc") # this is for data w/o gender 
+names(no_gender) <- data_no_gender
+
+data_col <- c("intel_theory", "gender", "attn_to", "ActPerc", "EstPerc") # this is for data w/ gender 
+names(gender) <- data_col
+
+# changing all categorical variables in both datasets to factors
+no_gender$attn_to <- as.factor(no_gender$attn_to)
+gender$attn_to <- as.factor(gender$attn_to)
+
+# fitted model w/o gender
+mod0 <- lm(EstPerc - ActPerc ~ ., data = no_gender)
+summary(mod0)
+mean(mod0$residuals^2) 
+
+par(mfrow=c(2,2)) # checking residuals: Normality, Homoscedasticity, Influential Points
+plot(mod0)
+points(fitted(mod0), resid(mod0), col = c("blue", "red"), pch = 16)
+legend("topright", legend = c("Male", "Female"), col = c("blue", "red"), pch = 16)
+
+# combine genders by independent variables 
+ggplot(gender, aes(x = gender, y = intel_theory, fill = gender)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Comparing Intel Theory")
+
+ggplot(gender, aes(x = gender, y = attn_to, fill = gender)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title="Comparing Attention")
+
+ggplot(gender, aes(x = gender, y = ActPerc, fill = gender)) +
+  geom_violin() +
+  theme_minimal() +
+  labs(title="Comparing Actual Percentile Score")
+
+ggplot(gender, aes(x = gender, y = EstPerc, fill = gender)) +
+  geom_violin() +
+  theme_minimal() +
+  labs(title="Comparing Estimated Percentile Score")
+
+```
+
+
+```{r models}
+# model w/ gender 
+mod1<- lm(EstPerc - ActPerc ~ ., data = gender)
+summary(mod1)
+plot(mod1)
+mean(mod1$residuals^2) 
+
+# compare the 2 models by checking the MSE & in-sample loss  
+mse_mod0 <- mean(mod0$residuals^2)
+mse_mod1 <- mean(mod1$residuals^2)
+MSE_Diff <- mse_mod0 - mse_mod1
+MSE_Diff
+
+r_squared <- summary(mod1)$r.squared - summary(mod0)$r.squared 
+r_squared
+
+```
+
+
+```{r tests}
+# F test for both models 
+anova(mod0, mod1)
+```
+
+
+# Additional calculations for paper version 2
+
+```{r}
+holdout_gender <- read.csv(file = "http://dept.stat.lsa.umich.edu/~bbh/s485/data/emdstudy3-all.csv", skip = 1, head =FALSE, sep=",")
+
+names(holdout_gender) <- data_col
+
+holdout_no_gender <- read.csv(file = "http://dept.stat.lsa.umich.edu/~bbh/s485/data/emdstudy3-all.csv", skip = 1, head =FALSE, sep=",")
+
+holdout_no_gender <- holdout_no_gender[,-2]
+
+names(holdout_no_gender) <- data_no_gender
+```
+
+
+```{r}
+m1 <- lm(EstPerc - ActPerc ~ ., data = holdout_no_gender)
+summary(m1)
+plot(m1)
+mean(m1$residuals^2)
+```
+
+```{r}
+m2 <- lm(EstPerc - ActPerc ~ ., data = holdout_gender)
+summary(m2)
+plot(m2)
+mean(m2$residuals^2)
+```
+
+```{r}
+MSE_Diff = mean(m1$residuals^2) - mean(m2$residuals^2)
+MSE_Diff
+r_squared_diff = 0.04806 - 0.01207
+r_squared_diff
+```
+
+
+
+```{r}
+holdout_gender <- read.csv(file = "http://dept.stat.lsa.umich.edu/~bbh/s485/data/emdstudy3-all.csv", 
+                           skip = 1, header = FALSE, sep = ",")
+
+# column names
+data_col <- c("intel_theory", "gender", "attn_to", "ActPerc", "EstPerc")  
+colnames(holdout_gender) <- data_col
+
+# w/o gender
+holdout_no_gender <- holdout_gender[, !(colnames(holdout_gender) %in% "gender")]
+
+# holdout data set only
+holdout <- read.csv("http://dept.stat.lsa.umich.edu/~bbh/s485/data/emdstudy3-holdout.csv")
+
+# Cross-validation
+cv.lm <- function(data, formulae, nfolds = 5) {
+  data <- na.omit(data)
+  formulae <- sapply(formulae, as.formula)
+  n <- nrow(data)
+  fold.labels <- sample(rep(1:nfolds, length.out = n))
+  mses <- matrix(NA, nrow = nfolds, ncol = length(formulae))
+  colnames(mses) <- as.character(formulae)
+  
+  for (fold in 1:nfolds) {
+    test.rows <- which(fold.labels == fold)
+    train <- data[-test.rows, ]
+    test <- data[test.rows, ]
+    
+    for (form in 1:length(formulae)) {
+      current.model <- lm(formula = formulae[[form]], data = train)
+      predictions <- predict(current.model, newdata = test)
+      test.responses <- eval(formulae[[form]][[2]], envir = test)
+      test.errors <- test.responses - predictions
+      mses[fold, form] <- mean(test.errors^2)
+    }
+  }
+  return(colMeans(mses))
+}
+
+# models
+model_w_gender <- "EstPerc - ActPerc ~ gender + intel_theory + attn_to"
+model_wo_gender <- "EstPerc - ActPerc ~ intel_theory + attn_to"
+
+cv_results <- cv.lm(holdout_gender, c(model_w_gender, model_wo_gender))
+print(cv_results)
+
+# model fitting
+m1 <- lm(EstPerc - ActPerc ~ ., data = holdout_no_gender)  # w/o gender
+m2 <- lm(EstPerc - ActPerc ~ ., data = holdout_gender)  # w/ gender
+
+# MSE
+mse_w_gender <- mean((holdout$EstPerc - predict(m2, holdout_gender))^2)
+mse_wo_gender <- mean((holdout$EstPerc - predict(m1, holdout_no_gender))^2)
+
+mse_w_gender
+mse_wo_gender
+
+```
+
+
+```{r}
+# fitted models for holdout sample 
+holdout_mod0 <- lm(EstPerc - ActPerc ~ intel_theory + attn_to, data = holdout_no_gender)
+holdout_mod1 <- lm(EstPerc - ActPerc ~ gender + intel_theory + attn_to, data = holdout_gender)
+
+anova(holdout_mod0, holdout_mod1)
+
+```
+
+
+
